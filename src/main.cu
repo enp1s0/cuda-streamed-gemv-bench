@@ -222,7 +222,7 @@ void eval(
 int main() {
   for (std::size_t i = 1; i < 20; i++) {
     const auto n = i * 32;
-    const auto batch_size = 5000;
+    const auto batch_size = 500;
     eval<BatchedGemv<double>>(n, n, batch_size);
     eval<StreamedGemv<16, double>>(n, n, batch_size);
   }
