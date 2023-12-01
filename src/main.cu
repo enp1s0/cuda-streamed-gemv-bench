@@ -105,6 +105,9 @@ struct BatchedGemv : public GemvBase<T> {
   BatchedGemv() : GemvBase<T>("BatchedGemv") {
     cublasCreate(&cublas_handle);
   }
+  ~BatchedGemv() {
+    cublasDestroy(cublas_handle);
+  }
 
   void operator() (
     const std::size_t m,
@@ -129,11 +132,17 @@ template <unsigned num_streams, class T>
 struct StreamedGemv : public GemvBase<T> {
   cudaStream_t stream_list[num_streams];
   cublasHandle_t cublas_handle_list[num_streams];
-  StreamedGemv() : GemvBase<T>("StreamedGemv") {
+  StreamedGemv() : GemvBase<T>("StreamedGemv<" + std::to_string(num_streams) + ">") {
     for (std::size_t i = 0; i < num_streams; i++) {
       cublasCreate(&cublas_handle_list[i]);
       cudaStreamCreate(&stream_list[i]);
       cublasSetStream(cublas_handle_list[i], stream_list[i]);
+    }
+  }
+  ~StreamedGemv() {
+    for (std::size_t i = 0; i < num_streams; i++) {
+      cublasDestroy(cublas_handle_list[i]);
+      cudaStreamDestroy(stream_list[i]);
     }
   }
   void operator() (
@@ -225,5 +234,7 @@ int main() {
     const auto batch_size = 500;
     eval<BatchedGemv<double>>(n, n, batch_size);
     eval<StreamedGemv<16, double>>(n, n, batch_size);
+    eval<StreamedGemv<32, double>>(n, n, batch_size);
+    eval<StreamedGemv<64, double>>(n, n, batch_size);
   }
 }
